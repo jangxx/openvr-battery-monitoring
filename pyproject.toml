@@ -1,0 +1,11 @@
+[project]
+name = "openvr-battery-monitoring"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "desktop-notifier>=6.2.0",
+    "openvr>=2.12.1401",
+    "pystray>=0.19.5",
+]
