@@ -1,6 +1,11 @@
 # OpenVR Battery Monitoring
 
->Simple script to send a desktop notification if an OpenVR device starts to lose battery
+> Simple script to send a desktop notification if an OpenVR device is not charging anymore.
+
+## Why?
+
+I'm using a Quest Pro with a powerbank for longer play sessions, but sometimes the powerbank runs out and I only notice once the headset shuts off (or reports being almost empty).
+This tool should notify me as soon as the powerbank runs out (or if the cable dislodges), so I can immediately take action.
 
 ## Installation
 
