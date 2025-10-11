@@ -10,50 +10,80 @@ import pystray
 from PIL import Image
 
 from desktop_notifier import DesktopNotifier, DEFAULT_SOUND, Icon, Sound
-from battery_reader import BatteryReader
+from lib.battery_reader import BatteryReader, CurrentDeviceState
+from lib.config import CONFIG_DIR, Config
 
 # determine if we are frozen with cx_freeze or running normally
 if getattr(sys, 'frozen', False):
-	# The application is frozen
-	SCRIPT_DIR = os.path.dirname(sys.executable)
-	IS_FROZEN = True
+    # The application is frozen
+    SCRIPT_DIR = os.path.dirname(sys.executable)
+    IS_FROZEN = True
 else:
-	# The application is not frozen
-	SCRIPT_DIR = os.path.dirname(__file__)
-	IS_FROZEN = False
+    # The application is not frozen
+    SCRIPT_DIR = os.path.dirname(__file__)
+    IS_FROZEN = False
 
+# create config dir if it doesn't exist
+Path(CONFIG_DIR).mkdir(parents=True, exist_ok=True)
 
 notifier = DesktopNotifier(app_name="Battery Monitor")
 battery_reader = BatteryReader()
+config = Config()
 
 @dataclass
 class DeviceState:
-    charging: bool
-    level: float
+    state: CurrentDeviceState
     level_direction: int = 0
 
 device_states: dict[int, DeviceState] = {}
+muted_devices = set(config.data.muted_devices)
 quit_event = threading.Event()
 
 trayicon = None
 
 def relpath(p):
-	return os.path.normpath(os.path.join(SCRIPT_DIR, p))
+    return os.path.normpath(os.path.join(SCRIPT_DIR, p))
+
+def toggle_device_mute(dev: CurrentDeviceState):
+    if dev.serial in muted_devices:
+        muted_devices.remove(dev.serial)
+    else:
+        muted_devices.add(dev.serial)
+
+    config.data.muted_devices = list(muted_devices)
+    config.save()
+
+def generate_devices_submenu():
+    yield pystray.MenuItem("Uncheck devices to disable notifications", action=None, enabled=False)
+    yield pystray.Menu.SEPARATOR
+
+    for dev_state in device_states.values():
+        yield pystray.MenuItem(
+            text=dev_state.state.name,
+            radio=True,
+            action=lambda: toggle_device_mute(dev_state.state),
+            checked=lambda item: dev_state.state.serial not in muted_devices,
+        )
 
 def generate_menu():
-	yield pystray.MenuItem("Exit", action=exit_program)
+    if not battery_reader.is_initialized:
+        yield pystray.MenuItem("Not connected to SteamVR", action=None, enabled=False)
+    else:
+        yield pystray.MenuItem("Devices", action=pystray.Menu(generate_devices_submenu))
 
-traymenu = pystray.Menu(generate_menu)
+    yield pystray.Menu.SEPARATOR
 
-trayicon = pystray.Icon("ovr_battery_monitoring", title="OpenVR Battery Monitoring", menu=traymenu)
+    yield pystray.MenuItem("Exit", action=exit_program)
+
+trayicon = pystray.Icon("ovr_battery_monitoring", title="OpenVR Battery Monitoring", menu=pystray.Menu(generate_menu))
 trayicon.icon = Image.open(relpath("assets/icon_256.png"))
 
 notification_icon = Icon(path=Path(relpath("assets/icon_256.png")))
 # notification_sound = Sound(path=Path(relpath("assets/uh_oh.wav")))
 
 def exit_program():
-	quit_event.set()
-	trayicon.stop()
+    quit_event.set()
+    trayicon.stop()
 
 async def main():
     while not quit_event.is_set():
@@ -67,49 +97,51 @@ async def main():
                 icon=notification_icon,
             )
 
-        levels = battery_reader.get_devices_battery_levels()
+        states = battery_reader.get_device_states()
 
-        if levels is not None:
-            for idx, name, is_charging, level in levels:
-                if idx not in device_states:
-                    device_states[idx] = DeviceState(charging=is_charging, level=level)
+        if states is not None:
+            for current_state in states:
+                if current_state.index not in device_states:
+                    device_states[current_state.index] = DeviceState(state=current_state)
 
-                is_discharging = False                
+                is_discharging = False
+                dev_state = device_states[current_state.index]
 
                 # simple case, device actually reports the state properly
-                if device_states[idx].charging and not is_charging:
+                if dev_state.state.charging and not current_state.charging:
                     is_discharging = True
 
-                device_states[idx].charging = is_charging
-
-                if device_states[idx].level > level:
-                    if device_states[idx].level_direction > 0:
+                if dev_state.state.level > current_state.level:
+                    if dev_state.level_direction > 0:
                         # was going up before but now it's decreasing
                         is_discharging = True
                     
-                    device_states[idx].level_direction = -1
-                elif device_states[idx].level < level:
-                    device_states[idx].level_direction = 1 # battery level is increasing
+                    dev_state.level_direction = -1
+                elif dev_state.state.level < current_state.level:
+                    dev_state.level_direction = 1 # battery level is increasing
 
-                device_states[idx].level = level
+                dev_state.state = current_state
 
-                if is_discharging:
+                if is_discharging and current_state.serial not in muted_devices:
                     await notifier.send(
                         title="Battery warning",
                         sound=DEFAULT_SOUND,
-                        message=f"Device {name} just started discharging!",
+                        message=f"Device {dev_state.state.name} just started discharging!",
                         icon=notification_icon,
                     )
+        else:
+            device_states.clear()
 
+        trayicon.update_menu()
 
         # keep an event loop running to react to steamvr closing
-        for i in range(10):
+        for _ in range(config.data.update_rate * 4):
             battery_reader.handle_events()
 
             if quit_event.is_set():
                  return
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.25)
 
 def setup(icon):
     icon.visible = True
@@ -117,6 +149,6 @@ def setup(icon):
     asyncio.run(main())
 
 if __name__ == '__main__':
-	signal.signal(signal.SIGINT, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-	trayicon.run(setup=setup)
+    trayicon.run(setup=setup)
