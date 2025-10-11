@@ -11,7 +11,7 @@ This tool aims to solve this problem by monitoring the charging state of devices
 
 ## Installation
 
-1. Go to the [Latest release](releases/latest) and download the zip file containing the executable.
+1. Go to the [Latest release](https://github.com/jangxx/openvr-battery-monitoring/releases/latest) and download the zip file containing the executable.
 2. Unzip the file to wheverever you like and then run the included `openvr_battery_monitoring.exe`.
 
 The script will run in the background and put a little icon into your system tray which you can use to quit the app and disable notifications for certain devices.
@@ -35,4 +35,5 @@ Prerequisite: Install Python 3.13 and [uv](https://docs.astral.sh/uv/getting-sta
 3. Run `uv run main.py` to run the script.
 
 Alternatively (after step 2) you can create a Desktop Shortcut to `pythonw.exe` inside `.venv/Scripts` in the project folder and give it an absolute path to `main.py` as a parameter within the Shortcut properties.
+
 There's also an ico file in `assets/` you can use for the Shortcut.
