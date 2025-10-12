@@ -57,12 +57,24 @@ def generate_devices_submenu():
     yield pystray.MenuItem("Uncheck devices to disable notifications", action=None, enabled=False)
     yield pystray.Menu.SEPARATOR
 
+    def make_action(dev: CurrentDeviceState):
+        def action():
+            toggle_device_mute(dev)
+
+        return action
+    
+    def make_checked(dev: CurrentDeviceState):
+        def checked(item):
+            return dev.serial not in muted_devices
+
+        return checked
+
     for dev_state in device_states.values():
         yield pystray.MenuItem(
             text=dev_state.state.name,
             radio=True,
-            action=lambda: toggle_device_mute(dev_state.state),
-            checked=lambda item: dev_state.state.serial not in muted_devices,
+            action=make_action(dev_state.state),
+            checked=make_checked(dev_state.state),
         )
 
 def generate_menu():
@@ -135,7 +147,7 @@ async def main():
         trayicon.update_menu()
 
         # keep an event loop running to react to steamvr closing
-        for _ in range(config.data.update_rate * 4):
+        for _ in range(config.data.update_interval * 4):
             battery_reader.handle_events()
 
             if quit_event.is_set():

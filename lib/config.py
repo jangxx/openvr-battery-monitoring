@@ -10,15 +10,15 @@ CONFIG_DIR = user_config_dir("OpenVR Battery Monitoring", "jangxx")
 
 DefaultConfigDict: dict = {
     "muted_devices": [],
-    "update_rate": 10,
+    "update_interval": 10,
 }
 
 class ConfigModel(BaseModel):
     muted_devices: list[str]
-    update_rate: int
+    update_interval: int
 
-    @field_validator("update_rate")
-    def validate_update_rate(cls, v):
+    @field_validator("update_interval")
+    def validate_update_interval(cls, v):
         return max(v, 1)
 
 ConfigMerger = Merger(
