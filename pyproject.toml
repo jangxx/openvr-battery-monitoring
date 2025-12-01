@@ -12,6 +12,7 @@ dependencies = [
     "openvr>=2.12.1401",
     "pydantic>=2.12.0",
     "pystray>=0.19.5",
+    "websockets>=15.0.1",
 ]
 
 [[tool.mypy.overrides]]

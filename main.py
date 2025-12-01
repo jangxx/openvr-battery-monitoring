@@ -8,10 +8,11 @@ from pathlib import Path
 
 import pystray
 from PIL import Image
-
 from desktop_notifier import DesktopNotifier, DEFAULT_SOUND, Icon, Sound
+
 from lib.battery_reader import BatteryReader, CurrentDeviceState
 from lib.config import CONFIG_DIR, Config
+from lib.ovrt_notifier import OvrtNotifier
 
 # determine if we are frozen with cx_freeze or running normally
 if getattr(sys, 'frozen', False):
@@ -26,7 +27,8 @@ else:
 # create config dir if it doesn't exist
 Path(CONFIG_DIR).mkdir(parents=True, exist_ok=True)
 
-notifier = DesktopNotifier(app_name="Battery Monitor")
+desktop_notifier = DesktopNotifier(app_name="Battery Monitor")
+ovrt_notifier = OvrtNotifier()
 battery_reader = BatteryReader()
 config = Config()
 
@@ -77,11 +79,33 @@ def generate_devices_submenu():
             checked=make_checked(dev_state.state),
         )
 
+def generate_notifications_submenu():
+    def toggle_desktop_notifications():
+        config.data.notifications.desktop = not config.data.notifications.desktop
+        config.save()
+
+    def toggle_ovrt_notifications():
+        config.data.notifications.ovrt = not config.data.notifications.ovrt
+        config.save()
+
+    yield pystray.MenuItem(
+        text="Desktop Notifications",
+        checked=lambda item: config.data.notifications.desktop,
+        action=lambda item: toggle_desktop_notifications(),
+    )
+
+    yield pystray.MenuItem(
+        text="OVRT Notifications",
+        checked=lambda item: config.data.notifications.ovrt,
+        action=lambda item: toggle_ovrt_notifications(),
+    )
+
 def generate_menu():
     if not battery_reader.is_initialized:
         yield pystray.MenuItem("Not connected to SteamVR", action=None, enabled=False)
     else:
         yield pystray.MenuItem("Devices", action=pystray.Menu(generate_devices_submenu))
+        yield pystray.MenuItem("Notifications", action=pystray.Menu(generate_notifications_submenu))
 
     yield pystray.Menu.SEPARATOR
 
@@ -102,12 +126,19 @@ async def main():
         just_initialized = battery_reader.initialize()
 
         if just_initialized:
-            await notifier.send(
-                title="Montior started",
-                sound=DEFAULT_SOUND,
-                message=f"Battery monitor has started.",
-                icon=notification_icon,
-            )
+            if config.data.notifications.desktop:
+                await desktop_notifier.send(
+                    title="Montior started",
+                    sound=DEFAULT_SOUND,
+                    message=f"Battery monitor has started.",
+                    icon=notification_icon,
+                )
+
+            if config.data.notifications.ovrt:
+                await ovrt_notifier.send_notification(
+                    title="Monitor started",
+                    body="Battery monitor has started.",
+                )
 
         states = battery_reader.get_device_states()
 
@@ -135,12 +166,19 @@ async def main():
                 dev_state.state = current_state
 
                 if is_discharging and current_state.serial not in muted_devices:
-                    await notifier.send(
-                        title="Battery warning",
-                        sound=DEFAULT_SOUND,
-                        message=f"Device {dev_state.state.name} just started discharging!",
-                        icon=notification_icon,
-                    )
+                    if config.data.notifications.desktop:
+                        await desktop_notifier.send(
+                            title="Battery warning",
+                            sound=DEFAULT_SOUND,
+                            message=f"Device {dev_state.state.name} just started discharging!",
+                            icon=notification_icon,
+                        )
+
+                    if config.data.notifications.ovrt:
+                        await ovrt_notifier.send_notification(
+                            title="Battery warning",
+                            body=f"Device {dev_state.state.name} just started discharging!",
+                        )
         else:
             device_states.clear()
 

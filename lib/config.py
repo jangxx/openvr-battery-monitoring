@@ -11,11 +11,20 @@ CONFIG_DIR = user_config_dir("OpenVR Battery Monitoring", "jangxx")
 DefaultConfigDict: dict = {
     "muted_devices": [],
     "update_interval": 10,
+    "notifications": {
+        "desktop": True,
+        "ovrt": False,
+    }
 }
+
+class ConfigNotificationsModel(BaseModel):
+    desktop: bool
+    ovrt: bool
 
 class ConfigModel(BaseModel):
     muted_devices: list[str]
     update_interval: int
+    notifications: ConfigNotificationsModel
 
     @field_validator("update_interval")
     def validate_update_interval(cls, v):
