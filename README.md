@@ -18,6 +18,11 @@ The script will run in the background and put a little icon into your system tra
 As soon as SteamVR is launched it will connect to it and monitor connected devices.
 Once SteamVR quits it will keep running and automatically re-connect once it's launched again.
 
+### Updating
+
+Simply delete the downloaded files, download the latest version and run them.
+The configuration is stored in `%localappdata%` and newer versions of the script are compatible with older versions of the configuration.
+
 ## Troubleshooting
 
 ### My device doesn't show up in the device list/is not tracked
