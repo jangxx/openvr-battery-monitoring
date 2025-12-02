@@ -37,3 +37,7 @@ Prerequisite: Install Python 3.13 and [uv](https://docs.astral.sh/uv/getting-sta
 Alternatively (after step 2) you can create a Desktop Shortcut to `pythonw.exe` inside `.venv/Scripts` in the project folder and give it an absolute path to `main.py` as a parameter within the Shortcut properties.
 
 There's also an ico file in `assets/` you can use for the Shortcut.
+
+# Attribution
+
+- Low-battery.mp3 by oysterqueen -- https://freesound.org/s/582986/ -- License: Creative Commons 0

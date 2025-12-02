@@ -10,6 +10,7 @@ dependencies = [
     "deepmerge>=2.0",
     "desktop-notifier>=6.2.0",
     "openvr>=2.12.1401",
+    "playsound3>=3.3.0",
     "pydantic>=2.12.0",
     "pystray>=0.19.5",
     "websockets>=15.0.1",

@@ -9,6 +9,8 @@ build_exe_options = {
 	"excludes": [ "tkinter", "PIL._avif" ],
 	"include_files": [
 		("./assets/icon_256.png", "assets/icon_256.png"),
+        ("./assets/icon_ovrt.png", "assets/icon_ovrt.png"),
+        ("./assets/low_battery.mp3", "assets/low_battery.mp3"),
 	],
 	"zip_include_packages": "*",
 	"zip_exclude_packages": [ "openvr", "desktop_notifier" ],

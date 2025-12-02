@@ -12,12 +12,14 @@ DefaultConfigDict: dict = {
     "muted_devices": [],
     "update_interval": 10,
     "notifications": {
+        "play_sound": True,
         "desktop": True,
         "ovrt": False,
     }
 }
 
 class ConfigNotificationsModel(BaseModel):
+    play_sound: bool
     desktop: bool
     ovrt: bool
 

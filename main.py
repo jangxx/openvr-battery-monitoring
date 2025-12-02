@@ -8,11 +8,12 @@ from pathlib import Path
 
 import pystray
 from PIL import Image
-from desktop_notifier import DesktopNotifier, DEFAULT_SOUND, Icon, Sound
+from desktop_notifier import DesktopNotifier, DEFAULT_SOUND, Icon
+from playsound3 import playsound
 
 from lib.battery_reader import BatteryReader, CurrentDeviceState
 from lib.config import CONFIG_DIR, Config
-from lib.ovrt_notifier import OvrtNotifier
+from lib.ovrt_notifier import OvrtIcon, OvrtNotifier
 
 # determine if we are frozen with cx_freeze or running normally
 if getattr(sys, 'frozen', False):
@@ -88,6 +89,16 @@ def generate_notifications_submenu():
         config.data.notifications.ovrt = not config.data.notifications.ovrt
         config.save()
 
+    def toggle_notification_sound():
+        config.data.notifications.play_sound = not config.data.notifications.play_sound
+        config.save()
+
+    yield pystray.MenuItem(
+        text="Notification Sound",
+        checked=lambda item: config.data.notifications.play_sound,
+        action=lambda item: toggle_notification_sound(),
+    )
+
     yield pystray.MenuItem(
         text="Desktop Notifications",
         checked=lambda item: config.data.notifications.desktop,
@@ -114,8 +125,9 @@ def generate_menu():
 trayicon = pystray.Icon("ovr_battery_monitoring", title="OpenVR Battery Monitoring", menu=pystray.Menu(generate_menu))
 trayicon.icon = Image.open(relpath("assets/icon_256.png"))
 
-notification_icon = Icon(path=Path(relpath("assets/icon_256.png")))
-# notification_sound = Sound(path=Path(relpath("assets/uh_oh.wav")))
+desktop_notification_icon = Icon(path=Path(relpath("assets/icon_256.png")))
+ovrt_notification_icon = OvrtIcon(relpath("assets/icon_ovrt.png"))
+# notification_sound = Sound(path=Path(relpath("assets/low_battery.mp3")))
 
 def exit_program():
     quit_event.set()
@@ -129,15 +141,20 @@ async def main():
             if config.data.notifications.desktop:
                 await desktop_notifier.send(
                     title="Montior started",
-                    sound=DEFAULT_SOUND,
+                    sound=DEFAULT_SOUND if config.data.notifications.play_sound else None,
                     message=f"Battery monitor has started.",
-                    icon=notification_icon,
+                    icon=desktop_notification_icon,
                 )
 
             if config.data.notifications.ovrt:
+                # startup notification sound is not needed
+                # if config.data.notifications.play_sound:
+                    # playsound(relpath("assets/low_battery.mp3"), block=False)
+
                 await ovrt_notifier.send_notification(
                     title="Monitor started",
                     body="Battery monitor has started.",
+                    icon=ovrt_notification_icon,
                 )
 
         states = battery_reader.get_device_states()
@@ -169,15 +186,19 @@ async def main():
                     if config.data.notifications.desktop:
                         await desktop_notifier.send(
                             title="Battery warning",
-                            sound=DEFAULT_SOUND,
+                            sound=DEFAULT_SOUND if config.data.notifications.play_sound else None,
                             message=f"Device {dev_state.state.name} just started discharging!",
-                            icon=notification_icon,
+                            icon=desktop_notification_icon,
                         )
 
                     if config.data.notifications.ovrt:
+                        if config.data.notifications.play_sound:
+                            playsound(relpath("assets/low_battery.mp3"), block=False)
+
                         await ovrt_notifier.send_notification(
                             title="Battery warning",
                             body=f"Device {dev_state.state.name} just started discharging!",
+                            icon=ovrt_notification_icon,
                         )
         else:
             device_states.clear()

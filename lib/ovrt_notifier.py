@@ -1,10 +1,18 @@
 from typing import Optional
 import json
+import base64
 
 from websockets.asyncio.client import connect, ClientConnection
 
 class OvrtIcon:
-    pass
+    data: str
+
+    def __init__(self, path):
+        self.path = path
+
+        with open(path, "rb") as f:
+            image_data = f.read()
+            self.data = base64.b64encode(image_data).decode('ascii')
 
 
 class OvrtNotifier:
@@ -16,6 +24,7 @@ class OvrtNotifier:
     async def connect(self):
         try:
             self.socket = await connect("ws://127.0.0.1:11450/api")
+            print("Connected to OVRT WebSocket API")
         except Exception as e:
             print(f"Failed to connect to OVRT: {e}")
             self.socket = None
@@ -29,11 +38,11 @@ class OvrtNotifier:
                 notification = {
                     "title": title,
                     "body": body,
-                    "icon": None, # TODO
+                    "icon": icon.data if icon else None,
                 }
 
                 message = {
-                    "messageType": "notification",
+                    "messageType": "SendNotification",
                     "json": json.dumps(notification),
                 }
 
